@@ -117,14 +117,22 @@ export default function FoundItems() {
       
       console.log("Fetched items:", res.data.items)
       const normalizedItems = (res.data.items || []).map((item) => {
-        const normalizedImages = item.images
+        const normalizedImages = item.images && Array.isArray(item.images) && item.images.length > 0
           ? item.images.map((img) => {
+              // Handle null, undefined, or empty strings
+              if (!img || typeof img !== 'string') {
+                console.warn('Invalid image path:', img)
+                return null
+              }
               // If already a full URL, use it as-is
               if (img.startsWith('http://') || img.startsWith('https://')) {
+                console.log('Using full URL:', img)
                 return img
               }
-              // If starts with /, use as-is with BASE_URL
+              // If starts with /, use as-is (will be prepended with BASE_URL when displaying)
               if (img.startsWith('/')) {
+                const fullUrl = `${BASE_URL}${img}`
+                console.log(`Image path: ${img} -> Full URL: ${fullUrl}`)
                 return img
               }
               // Otherwise, normalize to /uploads/found-items/filename
@@ -132,8 +140,9 @@ export default function FoundItems() {
               const normalizedPath = `/uploads/found-items/${filename}`
               console.log(`Normalizing image: ${img} -> ${normalizedPath}`)
               return normalizedPath
-            })
+            }).filter(img => img !== null) // Remove null values
           : []
+        console.log(`Item ${item._id} images:`, { original: item.images, normalized: normalizedImages })
         return {
           ...item,
           contactEmail: item.contactEmail ?? "",
@@ -823,21 +832,45 @@ export default function FoundItems() {
                   }`}
                 >
                   {/* Item Images */}
-                  {item.images && item.images.length > 0 ? (
-                    <div className={`${viewMode === "list" ? "w-full sm:w-64 h-48" : "h-48"} relative overflow-hidden`}>
-                      <img
-                        src={item.images[0].startsWith('http') ? item.images[0] : `${BASE_URL}${item.images[0]}`}
-                        alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        onError={(e) => {
-                          const imageUrl = item.images[0].startsWith('http') ? item.images[0] : `${BASE_URL}${item.images[0]}`
-                          console.error(`Failed to load image: ${imageUrl}`)
-                          // Use a data URI placeholder that doesn't require network access
-                          e.currentTarget.onerror = null
-                          e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect fill='%23e5e7eb' width='800' height='600'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E"
-                        }}
-                        loading="lazy"
-                      />
+                  {item.images && item.images.length > 0 && item.images[0] ? (() => {
+                    // Construct image URL
+                    const imagePath = item.images[0]
+                    let imageUrl = imagePath.startsWith('http') ? imagePath : `${BASE_URL}${imagePath}`
+                    
+                    return (
+                      <div className={`${viewMode === "list" ? "w-full sm:w-64 h-48" : "h-48"} relative overflow-hidden bg-gray-100`}>
+                        <img
+                          src={imageUrl}
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          onLoad={() => {
+                            console.log(`✓ Image loaded: ${imageUrl}`)
+                          }}
+                          onError={(e) => {
+                            // Try alternative path: /api/uploads/... if direct /uploads/... failed
+                            if (imagePath.startsWith('/uploads/') && !imageUrl.includes('/api/')) {
+                              const altUrl = imageUrl.replace('/uploads/', '/api/uploads/')
+                              console.log(`Trying alternative path: ${altUrl}`)
+                              e.currentTarget.onerror = null // Reset error handler
+                              e.currentTarget.src = altUrl
+                              return
+                            }
+                            console.error(`✗ Failed to load image: ${imageUrl}`, {
+                              originalPath: imagePath,
+                              baseUrl: BASE_URL,
+                              constructedUrl: imageUrl,
+                              itemId: item._id,
+                              itemTitle: item.title
+                            })
+                            // Use a data URI placeholder
+                            e.currentTarget.onerror = null
+                            e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect fill='%23e5e7eb' width='800' height='600'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E"
+                          }}
+                          loading="lazy"
+                        />
+                      </div>
+                    )
+                  })() : (
                       {item.images.length > 1 && (
                         <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-medium">
                           +{item.images.length - 1} more
