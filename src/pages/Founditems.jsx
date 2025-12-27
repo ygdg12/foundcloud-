@@ -119,6 +119,15 @@ export default function FoundItems() {
       const normalizedItems = (res.data.items || []).map((item) => {
         const normalizedImages = item.images
           ? item.images.map((img) => {
+              // If already a full URL, use it as-is
+              if (img.startsWith('http://') || img.startsWith('https://')) {
+                return img
+              }
+              // If starts with /, use as-is with BASE_URL
+              if (img.startsWith('/')) {
+                return img
+              }
+              // Otherwise, normalize to /uploads/found-items/filename
               const filename = img.split("/").pop()
               const normalizedPath = `/uploads/found-items/${filename}`
               console.log(`Normalizing image: ${img} -> ${normalizedPath}`)
@@ -817,15 +826,17 @@ export default function FoundItems() {
                   {item.images && item.images.length > 0 ? (
                     <div className={`${viewMode === "list" ? "w-full sm:w-64 h-48" : "h-48"} relative overflow-hidden`}>
                       <img
-                        src={`${BASE_URL}${item.images[0]}`}
+                        src={item.images[0].startsWith('http') ? item.images[0] : `${BASE_URL}${item.images[0]}`}
                         alt={item.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         onError={(e) => {
-                          console.error(`Failed to load image: ${BASE_URL}${item.images[0]}`)
-                          // Use a reliable external placeholder to avoid 404s in dev
+                          const imageUrl = item.images[0].startsWith('http') ? item.images[0] : `${BASE_URL}${item.images[0]}`
+                          console.error(`Failed to load image: ${imageUrl}`)
+                          // Use a data URI placeholder that doesn't require network access
                           e.currentTarget.onerror = null
-                          e.currentTarget.src = "https://via.placeholder.com/800x600?text=No+Image"
+                          e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect fill='%23e5e7eb' width='800' height='600'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E"
                         }}
+                        loading="lazy"
                       />
                       {item.images.length > 1 && (
                         <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-medium">
