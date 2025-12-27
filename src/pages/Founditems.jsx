@@ -5,10 +5,12 @@ import { useNavigate } from "react-router-dom"
 import axios from "axios"
 
 // Support both Vite and CRA environment variables
-const API_URL =
-  import.meta.env?.VITE_API_URL || process.env.REACT_APP_API_URL || "http://localhost:5000/api/found-items"
-const BASE_URL = import.meta.env?.VITE_BASE_URL || process.env.REACT_APP_BASE_URL || "http://localhost:5000"
+const BASE_URL = import.meta.env?.VITE_BASE_URL || process.env.REACT_APP_BASE_URL || "https://lost-items-backend-q30o.onrender.com"
+const API_URL = import.meta.env?.VITE_API_URL || process.env.REACT_APP_API_URL || `${BASE_URL}/api/found-items`
 const CLAIMS_URL = (import.meta.env?.VITE_CLAIMS_API_URL || process.env.REACT_APP_CLAIMS_API_URL) || `${BASE_URL}/api/claims`
+
+// Debug: Log the URLs being used
+console.log("API Configuration:", { BASE_URL, API_URL, CLAIMS_URL, env: process.env.REACT_APP_BASE_URL })
 
 export default function FoundItems() {
   const navigate = useNavigate()
