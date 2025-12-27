@@ -824,6 +824,11 @@ export default function FoundItems() {
         ) : (
           <div className={viewMode === "grid" ? "grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "space-y-6"}>
             {filteredItems.map((item) => {
+              // Compute image URL outside JSX
+              const imageUrl = item.images && item.images.length > 0 && item.images[0]
+                ? (item.images[0].startsWith('http') ? item.images[0] : `${BASE_URL}${item.images[0]}`)
+                : null
+              
               return (
                 <div
                   key={item._id}
@@ -832,53 +837,44 @@ export default function FoundItems() {
                   }`}
                 >
                   {/* Item Images */}
-                  {item.images && item.images.length > 0 && item.images[0] ? (
+                  {imageUrl ? (
                     <div className={`${viewMode === "list" ? "w-full sm:w-64 h-48" : "h-48"} relative overflow-hidden bg-gray-100`}>
-                      {(() => {
-                        // Construct image URL
-                        const imagePath = item.images[0]
-                        const imageUrl = imagePath.startsWith('http') ? imagePath : `${BASE_URL}${imagePath}`
-                        
-                        return (
-                          <>
-                            <img
-                              src={imageUrl}
-                              alt={item.title}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                              onLoad={() => {
-                                console.log(`✓ Image loaded: ${imageUrl}`)
-                              }}
-                              onError={(e) => {
-                                // Try alternative path: /api/uploads/... if direct /uploads/... failed
-                                if (imagePath.startsWith('/uploads/') && !imageUrl.includes('/api/')) {
-                                  const altUrl = imageUrl.replace('/uploads/', '/api/uploads/')
-                                  console.log(`Trying alternative path: ${altUrl}`)
-                                  e.currentTarget.onerror = null // Reset error handler
-                                  e.currentTarget.src = altUrl
-                                  return
-                                }
-                                console.error(`✗ Failed to load image: ${imageUrl}`, {
-                                  originalPath: imagePath,
-                                  baseUrl: BASE_URL,
-                                  constructedUrl: imageUrl,
-                                  itemId: item._id,
-                                  itemTitle: item.title
-                                })
-                                // Use a data URI placeholder
-                                e.currentTarget.onerror = null
-                                e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect fill='%23e5e7eb' width='800' height='600'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E"
-                              }}
-                              loading="lazy"
-                            />
-                            {item.images.length > 1 && (
-                              <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-medium">
-                                +{item.images.length - 1} more
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          </>
-                        )
-                      })()}
+                      <img
+                        src={imageUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        onLoad={() => {
+                          console.log(`✓ Image loaded: ${imageUrl}`)
+                        }}
+                        onError={(e) => {
+                          const imagePath = item.images[0]
+                          // Try alternative path: /api/uploads/... if direct /uploads/... failed
+                          if (imagePath && imagePath.startsWith('/uploads/') && !imageUrl.includes('/api/')) {
+                            const altUrl = imageUrl.replace('/uploads/', '/api/uploads/')
+                            console.log(`Trying alternative path: ${altUrl}`)
+                            e.currentTarget.onerror = null // Reset error handler
+                            e.currentTarget.src = altUrl
+                            return
+                          }
+                          console.error(`✗ Failed to load image: ${imageUrl}`, {
+                            originalPath: imagePath,
+                            baseUrl: BASE_URL,
+                            constructedUrl: imageUrl,
+                            itemId: item._id,
+                            itemTitle: item.title
+                          })
+                          // Use a data URI placeholder
+                          e.currentTarget.onerror = null
+                          e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect fill='%23e5e7eb' width='800' height='600'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E"
+                        }}
+                        loading="lazy"
+                      />
+                      {item.images.length > 1 && (
+                        <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-medium">
+                          +{item.images.length - 1} more
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </div>
                   ) : (
                     <div
